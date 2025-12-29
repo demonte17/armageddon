@@ -3,9 +3,17 @@ Lab 2 Architecture
 Internet → CloudFront (+ WAF) → ALB (locked to CloudFront) → Private EC2 → RDS
 
 Key constraints
+  No one can hit ALB directly (even if they know ALB DNS)
+  WAF enforcement happens at CloudFront edge
+  DNS points to CloudFront, not ALB
 
-No one can hit ALB directly (even if they know ALB DNS)
 
-WAF enforcement happens at CloudFront edge
+Terraform Overlay: lab2_cloudfront_origin_cloaking.tf
 
-DNS points to CloudFront, not ALB
+Assumes you already have:
+  aws_lb.chewbacca_alb01
+  aws_security_group.chewbacca_alb_sg01
+  Route53 zone from Bonus-B
+  WAF already exists (you’ll replace it with CLOUDFRONT-scoped WAF below)
+
+
