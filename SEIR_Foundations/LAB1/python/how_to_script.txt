@@ -92,7 +92,7 @@ That’s how “operator judgement” becomes “automated policy.”
 
 ✅ One book (best single book for brave beginners)
 
-The Linux Command Line by William Shotts
+The Linux Command Line by William Shotts: https://github.com/BalericaAI/armageddon/blob/main/SEIR_Foundations/LAB1/python/Shotts-W.-E.-Jr.-The-Linux-Command-Line-A-Complete-Introduction-2012.pdf
 It’s designed for new command-line users and includes shell scripting chapters. 
 
 If you read only:
