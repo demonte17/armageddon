@@ -264,7 +264,100 @@ Install pymysql into package:
 
 Create lambda_function.py:
 
+https://github.com/BalericaAI/armageddon/blob/main/SEIR_Foundations/lab11/lambda/lambda_function.py
 
+        cat > lambda_function.py <<'EOF'
+
+Zip it:
+
+        zip -r ../chewbacca_lambda_11a.zip . >/dev/null
+        cd ..
+
+7B) Create Lambda function
+
+        aws lambda create-function \
+          --function-name "$LAMBDA_NAME" \
+          --runtime python3.12 \
+          --handler lambda_function.lambda_handler \
+          --zip-file "fileb://chewbacca_lambda_11a.zip" \
+          --role "$LAMBDA_ROLE_ARN" \
+          --timeout 10 \
+          --memory-size 256 \
+          --environment "Variables={DB_SECRET_ARN=$SECRET_ARN,DB_NAME=$DB_NAME,DB_CONNECT_TIMEOUT=5}" \
+          --vpc-config "SubnetIds=$SUBNET1,$SUBNET2,SecurityGroupIds=$LAMBDA_SG_ID" \
+          --region "$AWS_REGION"
+
+Verify config:
+
+    #Chewbacca: If VpcConfig is empty, the Wookiee throws the console at you.
+aws lambda get-function-configuration --function-name "$LAMBDA_NAME" \
+  --query "{Runtime:Runtime,VpcConfig:VpcConfig,Env:Environment.Variables}" --output json
+
+8) Create API Gateway HTTP API + route
+
+Create API:
+
+        export API_ID="$(aws apigatewayv2 create-api \
+          --name "$API_NAME" \
+          --protocol-type HTTP \
+          --query ApiId --output text)"
+        
+        echo "API_ID=$API_ID"
+
+Create integration (Lambda proxy):
+
+        export INTEGRATION_ID="$(aws apigatewayv2 create-integration \
+          --api-id "$API_ID" \
+          --integration-type AWS_PROXY \
+          --integration-uri "arn:aws:lambda:$AWS_REGION:$account_id:function:$LAMBDA_NAME" \
+          --payload-format-version "2.0" \
+          --query IntegrationId --output text)"
+        
+        echo "INTEGRATION_ID=$INTEGRATION_ID"
+
+Create route:
+
+        aws apigatewayv2 create-route \
+          --api-id "$API_ID" \
+          --route-key "POST /intake" \
+          --target "integrations/$INTEGRATION_ID"
+
+Create stage:
+
+        aws apigatewayv2 create-stage --api-id "$API_ID" --stage-name "$STAGE_NAME" --auto-deploy
+
+Allow API Gateway to invoke Lambda:
+
+        #Chewbacca: API Gateway must be allowed to puke on the Wookiee.
+        aws lambda add-permission \
+          --function-name "$LAMBDA_NAME" \
+          --statement-id "apigw-invoke-11a" \
+          --action lambda:InvokeFunction \
+          --principal apigateway.amazonaws.com \
+          --source-arn "arn:aws:execute-api:$AWS_REGION:$account_id:$API_ID/*/*/intake"
+
+Invoke URL:
+
+        export INVOKE_URL="https://${API_ID}.execute-api.${AWS_REGION}.amazonaws.com/${STAGE_NAME}/intake"
+        echo "$INVOKE_URL"
+
+9) Test it (curl) + prove insert
+
+Invoke:
+
+        #Chewbacca: If this returns DB_WRITE_FAILED, your networking is wrong and you win Lizzo. Good. Learn it.
+        curl -sS -X POST "$INVOKE_URL" \
+          -H "content-type: application/json" \
+          -d '{"actor":"doctor.ny","action":"VIEW_PATIENT","resource":"patient/12345","note":"Viewed chart"}'
+
+
+Watch logs:
+        # Chewbacca watching you.... 
+        aws logs tail "/aws/lambda/$LAMBDA_NAME" --since 10m --follow
+
+DB proof (from your MySQL client):
+
+        SELECT * FROM audit_events ORDER BY ts_utc DESC LIMIT 5;
 
 
 
