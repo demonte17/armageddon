@@ -222,6 +222,49 @@ Create role:
     
     echo "LAMBDA_ROLE_ARN=$LAMBDA_ROLE_ARN"
 
+Attach managed policies for logging + VPC access:
+
+        aws iam attach-role-policy --role-name "$LAMBDA_ROLE_NAME" \
+          --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        
+        aws iam attach-role-policy --role-name "$LAMBDA_ROLE_NAME" \
+          --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+
+Add inline policy to read the secret:
+
+        cat > lambda_secret_policy.json <<EOF
+        {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Action": ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"],
+            "Resource": "$SECRET_ARN"
+          }]
+        }
+        EOF
+        
+        aws iam put-role-policy \
+          --role-name "$LAMBDA_ROLE_NAME" \
+          --policy-name "chewbacca-read-secret-11a" \
+          --policy-document file://lambda_secret_policy.json
+        
+
+7) Create Lambda (Python + pymysql)
+7A) Build package
+
+Create folder:
+
+        mkdir -p lambda_pkg
+        cd lambda_pkg
+
+Install pymysql into package:
+
+        #Chewbacca: pymysql is pure Python. SEIR-I mercy granted.
+        pip3 install pymysql -t .
+
+Create lambda_function.py:
+
+
 
 
 
